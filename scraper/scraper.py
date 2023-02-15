@@ -2,54 +2,37 @@ from typing import List
 import requests
 from json import dump, load, loads
 from os import listdir
+from newscatcherapi import NewsCatcherApiClient
+from time import sleep
 
-API_KEY = "pub_172363ab3a9e0d9baad7f443feba04fc43dbc"
-SCRAPE_URL_TEMPLATE = "https://newsdata.io/api/1/news?apikey={api_key}&language=he&domain={source}"
-
-
-def scrape_source(source: str) -> bool:
-    source_url = SCRAPE_URL_TEMPLATE.format(api_key=API_KEY, source=source)
-    rsp = requests.get(source_url)
-    if not rsp.ok:
-        return False
-    with open(f"scraping_temp_data/{source}.json", 'w', encoding='utf-8') as scrape_data:
-        dump(loads(rsp.text)['results'], scrape_data)
-    return True
+API_KEY = "83RbYyEcVztqs2j75C04Mmu8IRNrANAaiX2SIpA9zxo"
+ARTICLES_PER_PAGE = 100
 
 
-def scrape_all_sources() -> None:
-    with open("sources.json") as sources:
-        sources = load(sources).keys()
-    for source in sources:
-        if scrape_source(source):
-            print(f"* Scraped {source}")
-        else:
-            print(f"* Error scraping {source}")
+class Scraper:
+    def __init__(self):
+        self.api = NewsCatcherApiClient(x_api_key=API_KEY)
+        self.sources = None
+        self._init_sources()
 
+    def _init_sources(self):
+        self.sources = self.api.get_sources(lang='he', countries='il', topic='news')['sources'][:30]
 
-def unify_all_jsons():
-    with open("sources.json") as sources:
-        sources = load(sources).keys()
-    all_json = []
-    for source in sources:
-        with open(f"scraping_temp_data/{source}.json") as json_file:
-            all_json.extend(load(json_file))
-    with open(f"scraping_data/all.json", 'w') as json_file:
-        dump(all_json, json_file)
+    def scrape_source(self, source: str):
+        data = self.api.get_latest_headlines(lang='he', countries='il', topic='news', sources=source, page_size=100)[
+            'articles']
+        return data
 
+    def save_all_sources(self):
+        all_data = []
+        for source in self.sources:
+            try:
+                all_data.extend(self.scrape_source(source))
+            except Exception:
+                print(f"* Problem scraping {source}")
+            else:
+                print(f"* Scraped {source}")
+                sleep(1.1)
 
-# Those functions are responsible to convert a news site url to arcticles
-
-def map_article(url: str) -> List[str]:
-    '''
-    This function gets a url to a news site then returns a list of
-    all the urls of articles currently in the sites.
-    '''
-    pass
-
-
-def is_article(url: str) -> bool:
-    '''
-    This function checks if certain url contains an arcticle
-    '''
-    pass
+        with open("scraping_data/all.json", 'w') as json_file:
+            dump(all_data, json_file)
