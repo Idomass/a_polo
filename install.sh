@@ -1,4 +1,5 @@
-python3 -m virtualenv venv
+#! /bin/bash
 
-# pip installations
-pip install beautifulsoup4
+python3 -m virtualenv venv
+. venv/bin/activate
+pip3 install -r requirements.txt
