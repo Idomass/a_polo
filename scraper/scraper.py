@@ -1,9 +1,7 @@
-from typing import List
-import requests
-from json import dump, load, loads
-from os import listdir
-from newscatcherapi import NewsCatcherApiClient
+from json import dump
 from time import sleep
+
+from newscatcherapi import NewsCatcherApiClient
 
 API_KEY = "83RbYyEcVztqs2j75C04Mmu8IRNrANAaiX2SIpA9zxo"
 ARTICLES_PER_PAGE = 100
