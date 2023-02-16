@@ -1,10 +1,9 @@
 #! /usr/bin/env python3
 
 import json
-
 import numpy as np
 import pandas as pd
-# from googletrans import Translator
+from googletrans import Translator
 from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
@@ -15,32 +14,32 @@ SIMILAR_MIN = 4
 MIN_ARTICLES = 4
 
 
-def cluster_matching_articles():
+def cluster_articles():
+    ps = PorterStemmer()
     stop_words = stopwords.words('english')
 
     def clean_sentence(sentence):
         return [ps.stem(w) for w in wordpunct_tokenize(sentence) if w.lower() not in stop_words and w.isalnum()]
 
-    ps = PorterStemmer()
     pdf = pd.read_json("scraping_temp_data/translated.json")
     pdf['cleaned_title'] = pdf['english_title'].apply(clean_sentence)
     cleaned_titles = pdf['cleaned_title'].to_list()
 
-    output_matrix = np.empty((len(pdf), len(pdf)))
+    adj_matrix = np.empty((len(pdf), len(pdf)))
     for i in range(len(pdf)):
         for j in range(len(pdf)):
             if i == j:
-                output_matrix[i][j] = np.nan
+                adj_matrix[i][j] = 0
                 continue
             similarity = len(set(cleaned_titles[i]).intersection(set(cleaned_titles[j])))
             if similarity < SIMILAR_MIN:
-                output_matrix[i][j] = np.nan
+                adj_matrix[i][j] = 0
                 continue
-            output_matrix[i][j] = True
+            adj_matrix[i][j] = 1
 
-    adj_matrix = pd.DataFrame(output_matrix).fillna(0)
-    pdf['labels'] = connected_components(adj_matrix.to_numpy())[1]
+    pdf['labels'] = connected_components(adj_matrix)[1]
 
+    # Back-end format.
     def to_article(row):
         return {
             'title': row['title'],
@@ -92,3 +91,5 @@ def translate_all_json():
 
 if __name__ == '__main__':
     translate_all_json()
+    cluster_articles()
+    upload_to_s3()
